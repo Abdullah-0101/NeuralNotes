@@ -19,8 +19,7 @@ load_dotenv()
 os.environ["GOOGLE_API_USE_MTLS"] = "never"
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-# Use a model with free tier quota (gemini-2.0-flash has limit: 0 on free tier)
-model = genai.GenerativeModel('gemini-2.5-flash-lite')
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 app = FastAPI()
 
@@ -33,12 +32,22 @@ app.add_middleware(
 
 class NoteRequest(BaseModel):
     text: str
+    language: str = "English"
 
 @app.post("/generate")
 async def generate_cards(request: NoteRequest):
+    lang = request.language if request.language in ("English", "Arabic") else "English"
+
+    lang_instruction = ""
+    if lang == "Arabic":
+        lang_instruction = "Generate the question, all options, and the correctAnswer in clear, modern Arabic."
+    else:
+        lang_instruction = "Generate everything in English."
+
     prompt = f"""
     Create 5 multiple choice questions (MCQs) from the text below.
     Each MCQ must have exactly 4 options, with one correct answer.
+    {lang_instruction}
     Return ONLY valid JSON in this exact format (no markdown, no extra text):
     [{{"question": "Question text?", "options": ["Option A", "Option B", "Option C", "Option D"], "correctAnswer": "Option A"}}]
     The correctAnswer must be exactly one of the option strings.

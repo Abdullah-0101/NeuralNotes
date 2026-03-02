@@ -43,6 +43,11 @@
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
         .fade-in { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        .lang-btn { color: #64748b; }
+        .lang-btn.active { background: linear-gradient(135deg, #22d3ee, #0891b2); color: #0f1419; }
+        .lang-btn:not(.active):hover { color: #e2e8f0; }
+        .rtl { direction: rtl; text-align: right; }
+        .rtl .card-option:hover:not(.disabled) { transform: translateX(-4px); }
     </style>
 </head>
 <body class="text-slate-100 antialiased">
@@ -63,13 +68,26 @@
                 class="w-full bg-card/80 border border-white/10 rounded-2xl p-5 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/50 resize-none transition"
                 placeholder="Paste your study notes here...&#10;&#10;Example: The mitochondria is the powerhouse of the cell. It produces ATP through cellular respiration. Chloroplasts perform photosynthesis in plant cells."
             ></textarea>
-            <button
-                onclick="generateCards()"
-                id="btn"
-                class="btn-primary w-full mt-5 py-4 rounded-2xl font-semibold text-slate-900 shadow-lg shadow-cyan-500/25 transition"
-            >
-                Generate MCQs
-            </button>
+
+            <div class="flex items-center gap-4 mt-5">
+                <div class="flex items-center bg-card/80 border border-white/10 rounded-2xl p-1 shrink-0">
+                    <button id="lang-en" onclick="setLanguage('English')"
+                        class="lang-btn px-5 py-3 rounded-xl text-sm font-semibold transition active">
+                        English
+                    </button>
+                    <button id="lang-ar" onclick="setLanguage('Arabic')"
+                        class="lang-btn px-5 py-3 rounded-xl text-sm font-semibold transition">
+                        العربية
+                    </button>
+                </div>
+                <button
+                    onclick="generateCards()"
+                    id="btn"
+                    class="btn-primary flex-1 py-4 rounded-2xl font-semibold text-slate-900 shadow-lg shadow-cyan-500/25 transition"
+                >
+                    Generate MCQs
+                </button>
+            </div>
         </section>
 
         <div id="loading" class="hidden mb-12 text-center py-12 rounded-2xl card">
@@ -81,12 +99,19 @@
         </div>
 
         <footer class="mt-16 text-center text-slate-500 text-sm pb-8">
-            Personal Project by Abdullah Nawaf Alsalem
+            Developed by Abdullah Nawaf Alsalem
         </footer>
     </div>
 
     <script>
         let mcqCards = [];
+        let selectedLanguage = 'English';
+
+        function setLanguage(lang) {
+            selectedLanguage = lang;
+            document.getElementById('lang-en').classList.toggle('active', lang === 'English');
+            document.getElementById('lang-ar').classList.toggle('active', lang === 'Arabic');
+        }
 
         async function generateCards() {
             const text = document.getElementById('notes').value.trim();
@@ -107,7 +132,7 @@
                 const response = await fetch('https://neuralnotes.onrender.com/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text })
+                    body: JSON.stringify({ text, language: selectedLanguage })
                 });
 
                 const data = await response.json();
@@ -130,9 +155,10 @@
             const container = document.getElementById('cards-container');
             container.innerHTML = '';
 
+            const isArabic = selectedLanguage === 'Arabic';
             mcqCards.forEach((card, idx) => {
                 const el = document.createElement('div');
-                el.className = 'card rounded-2xl p-8 fade-in';
+                el.className = 'card rounded-2xl p-8 fade-in' + (isArabic ? ' rtl' : '');
                 el.dataset.index = idx;
                 el.innerHTML = `
                     <div class="flex items-center gap-2 mb-6">
