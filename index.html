@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Active Recall AI — MCQ Quiz</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Outfit', 'sans-serif'] },
+                    colors: {
+                        surface: '#0f1419',
+                        card: '#1a2332',
+                        accent: '#22d3ee',
+                        accentDim: '#0891b2',
+                        correct: '#34d399',
+                        wrong: '#f87171',
+                        muted: '#64748b'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { font-family: 'Outfit', sans-serif; }
+        body { background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 50%, #0f172a 100%); min-height: 100vh; }
+        .card-option { transition: all 0.2s ease; }
+        .card-option:hover:not(.disabled) { background: rgba(34, 211, 238, 0.15); border-color: #22d3ee; transform: translateX(4px); }
+        .card-option.correct { background: rgba(52, 211, 153, 0.2); border-color: #34d399; color: #34d399; }
+        .card-option.wrong { background: rgba(248, 113, 113, 0.2); border-color: #f87171; color: #f87171; pointer-events: none; }
+        .card-option.disabled { opacity: 0.6; pointer-events: none; }
+        .card { background: linear-gradient(180deg, #1a2332 0%, #151d2b 100%); border: 1px solid rgba(255,255,255,0.06); }
+        .card:hover { border-color: rgba(34, 211, 238, 0.3); }
+        .btn-primary { background: linear-gradient(135deg, #22d3ee, #0891b2); }
+        .btn-primary:hover:not(:disabled) { filter: brightness(1.15); transform: translateY(-1px); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .shimmer { animation: shimmer 2s infinite linear; background: linear-gradient(90deg, #22d3ee20 0%, #22d3ee40 50%, #22d3ee20 100%); background-size: 200% 100%; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="text-slate-100 antialiased">
+    <div class="max-w-2xl mx-auto px-6 py-12">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold tracking-tight bg-gradient-to-r from-cyan-300 to-teal-400 bg-clip-text text-transparent">
+                Active Recall AI
+            </h1>
+            <p class="text-muted mt-2 text-slate-400">
+                Paste your notes. Get MCQs. Test yourself.
+            </p>
+        </header>
+
+        <section id="input-section" class="mb-12">
+            <textarea
+                id="notes"
+                rows="5"
+                class="w-full bg-card/80 border border-white/10 rounded-2xl p-5 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/50 resize-none transition"
+                placeholder="Paste your study notes here...&#10;&#10;Example: The mitochondria is the powerhouse of the cell. It produces ATP through cellular respiration. Chloroplasts perform photosynthesis in plant cells."
+            ></textarea>
+            <button
+                onclick="generateCards()"
+                id="btn"
+                class="btn-primary w-full mt-5 py-4 rounded-2xl font-semibold text-slate-900 shadow-lg shadow-cyan-500/25 transition"
+            >
+                Generate MCQs
+            </button>
+        </section>
+
+        <div id="loading" class="hidden mb-12 text-center py-12 rounded-2xl card">
+            <div class="shimmer rounded-xl h-3 w-48 mx-auto mb-4"></div>
+            <p class="text-slate-400">AI is generating your quiz...</p>
+        </div>
+
+        <div id="cards-container" class="space-y-8">
+        </div>
+    </div>
+
+    <script>
+        let mcqCards = [];
+
+        async function generateCards() {
+            const text = document.getElementById('notes').value.trim();
+            const btn = document.getElementById('btn');
+            const loading = document.getElementById('loading');
+            const container = document.getElementById('cards-container');
+
+            if (!text) {
+                alert("Please paste some notes first!");
+                return;
+            }
+
+            btn.disabled = true;
+            loading.classList.remove('hidden');
+            container.innerHTML = '';
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || "API error");
+
+                mcqCards = Array.isArray(data) ? data : [];
+                renderCards();
+            } catch (err) {
+                const msg = (err.message && err.message.includes("fetch"))
+                    ? "Could not connect to the AI engine. Make sure main.py is running!"
+                    : (err.message || "An error occurred.");
+                alert(msg);
+            } finally {
+                btn.disabled = false;
+                loading.classList.add('hidden');
+            }
+        }
+
+        function renderCards() {
+            const container = document.getElementById('cards-container');
+            container.innerHTML = '';
+
+            mcqCards.forEach((card, idx) => {
+                const el = document.createElement('div');
+                el.className = 'card rounded-2xl p-8 fade-in';
+                el.dataset.index = idx;
+                el.innerHTML = `
+                    <div class="flex items-center gap-2 mb-6">
+                        <span class="bg-accent/20 text-accent text-sm font-medium px-3 py-1 rounded-full">Q${idx + 1}</span>
+                    </div>
+                    <p class="text-lg font-medium text-slate-200 mb-6 leading-relaxed">${escapeHtml(card.question)}</p>
+                    <div class="space-y-3" id="options-${idx}"></div>
+                    <div id="feedback-${idx}" class="mt-4 hidden"></div>
+                `;
+
+                const optionsContainer = el.querySelector(`#options-${idx}`);
+                (card.options || []).forEach((opt, optIdx) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'card-option w-full text-left p-4 rounded-xl border border-white/10 bg-white/5 text-slate-300';
+                    btn.textContent = opt;
+                    btn.dataset.option = opt;
+                    btn.onclick = () => selectOption(idx, opt);
+                    optionsContainer.appendChild(btn);
+                });
+
+                container.appendChild(el);
+            });
+        }
+
+        function selectOption(cardIdx, selectedOption) {
+            const card = mcqCards[cardIdx];
+            const correctAnswer = (card.correctAnswer || card.correct_answer || '').trim();
+            const optionsContainer = document.getElementById(`options-${cardIdx}`);
+            const feedbackDiv = document.getElementById(`feedback-${cardIdx}`);
+
+            if (!optionsContainer || !card || !feedbackDiv) return;
+
+            const buttons = optionsContainer.querySelectorAll('button');
+
+            const isCorrect = String(selectedOption).trim() === correctAnswer;
+            const matchCorrect = (opt) => String(opt || '').trim() === correctAnswer;
+
+            if (isCorrect) {
+                buttons.forEach(btn => {
+                    btn.classList.add('disabled');
+                    if (matchCorrect(btn.dataset.option)) btn.classList.add('correct');
+                });
+                feedbackDiv.classList.remove('hidden');
+                feedbackDiv.innerHTML = '<span class="text-correct font-medium">✓ Correct!</span>';
+            } else {
+                const selectedBtn = Array.from(buttons).find(b => b.dataset.option === selectedOption);
+                if (selectedBtn) {
+                    selectedBtn.classList.add('wrong');
+                    selectedBtn.classList.add('disabled');
+                }
+                feedbackDiv.classList.remove('hidden');
+                const wrongCount = optionsContainer.querySelectorAll('.wrong').length;
+                const totalOptions = (card.options || []).length;
+                if (wrongCount >= totalOptions - 1) {
+                    buttons.forEach(btn => {
+                        btn.classList.add('disabled');
+                        if (matchCorrect(btn.dataset.option)) btn.classList.add('correct');
+                    });
+                    feedbackDiv.innerHTML = `<span class="text-wrong">Incorrect.</span> <span class="text-slate-400">Correct answer: </span><span class="text-correct">${escapeHtml(correctAnswer)}</span>`;
+                } else {
+                    feedbackDiv.innerHTML = '<span class="text-wrong font-medium">Incorrect. Try another answer!</span>';
+                }
+            }
+        }
+
+        function escapeHtml(s) {
+            const div = document.createElement('div');
+            div.textContent = s || '';
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
