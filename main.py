@@ -1,3 +1,9 @@
+"""
+Render deploy note:
+Set Start Command to:
+python -m uvicorn main:app --host 0.0.0.0 --port $PORT
+"""
+
 import os
 import json
 from fastapi import FastAPI, HTTPException
