@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -29,74 +30,141 @@
     <style>
         * { font-family: 'Outfit', sans-serif; }
         body { background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 50%, #0f172a 100%); min-height: 100vh; }
+
         .card-option { transition: all 0.2s ease; }
         .card-option:hover:not(.disabled) { background: rgba(34, 211, 238, 0.15); border-color: #22d3ee; transform: translateX(4px); }
-        .card-option.correct { background: rgba(52, 211, 153, 0.2); border-color: #34d399; color: #34d399; }
-        .card-option.wrong { background: rgba(248, 113, 113, 0.2); border-color: #f87171; color: #f87171; pointer-events: none; }
+        .card-option.correct { background: rgba(52, 211, 153, 0.2) !important; border-color: #34d399 !important; color: #34d399 !important; }
+        .card-option.wrong { background: rgba(248, 113, 113, 0.2) !important; border-color: #f87171 !important; color: #f87171 !important; pointer-events: none; }
         .card-option.disabled { opacity: 0.6; pointer-events: none; }
-        .card { background: linear-gradient(180deg, #1a2332 0%, #151d2b 100%); border: 1px solid rgba(255,255,255,0.06); }
-        .card:hover { border-color: rgba(34, 211, 238, 0.3); }
+
+        .qcard {
+            background: linear-gradient(180deg, #1a2332 0%, #151d2b 100%);
+            border: 1px solid rgba(255,255,255,0.06);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+        .qcard:hover { border-color: rgba(34, 211, 238, 0.3); box-shadow: 0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06); }
+
+        .pill-btn { color: #64748b; transition: all 0.2s; }
+        .pill-btn.active { background: linear-gradient(135deg, #22d3ee, #0891b2); color: #0f1419; }
+        .pill-btn:not(.active):hover { color: #e2e8f0; }
+
         .btn-primary { background: linear-gradient(135deg, #22d3ee, #0891b2); }
         .btn-primary:hover:not(:disabled) { filter: brightness(1.15); transform: translateY(-1px); }
         .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
         .shimmer { animation: shimmer 2s infinite linear; background: linear-gradient(90deg, #22d3ee20 0%, #22d3ee40 50%, #22d3ee20 100%); background-size: 200% 100%; }
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
         .fade-in { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        .lang-btn { color: #64748b; }
-        .lang-btn.active { background: linear-gradient(135deg, #22d3ee, #0891b2); color: #0f1419; }
-        .lang-btn:not(.active):hover { color: #e2e8f0; }
+
         .rtl { direction: rtl; text-align: right; }
         .rtl .card-option:hover:not(.disabled) { transform: translateX(-4px); }
+
+        .flip-card { perspective: 1200px; }
+        .flip-inner { position: relative; width: 100%; min-height: 220px; transition: transform 0.7s cubic-bezier(0.4, 0.0, 0.2, 1); transform-style: preserve-3d; }
+        .flip-card.flipped .flip-inner { transform: rotateY(180deg); }
+        .flip-face {
+            position: absolute; inset: 0; backface-visibility: hidden;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 32px 28px; border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06);
+        }
+        .flip-front-face {
+            background: linear-gradient(180deg, #1e293b 0%, #1a2332 100%);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .flip-back-face {
+            transform: rotateY(180deg);
+            background: linear-gradient(135deg, #0891b2, #22d3ee);
+            color: #0f1419;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+        .flip-btn {
+            background: rgba(34, 211, 238, 0.15); border: 1px solid rgba(34, 211, 238, 0.3);
+            color: #22d3ee; transition: all 0.2s;
+        }
+        .flip-btn:hover { background: rgba(34, 211, 238, 0.25); transform: scale(1.05); }
+        .flip-card.flipped .flip-btn-back { background: rgba(0,0,0,0.15); border-color: rgba(0,0,0,0.2); color: #0f1419; }
+        .flip-card.flipped .flip-btn-back:hover { background: rgba(0,0,0,0.25); }
+
+        .export-menu { display: none; }
+        .export-menu.show { display: block; }
     </style>
 </head>
 <body class="text-slate-100 antialiased">
     <div class="max-w-2xl mx-auto px-6 py-12">
+
         <header class="text-center mb-12">
             <h1 class="text-4xl font-bold tracking-tight bg-gradient-to-r from-cyan-300 to-teal-400 bg-clip-text text-transparent">
                 Alsalem Neural-Notes
             </h1>
-            <p class="text-muted mt-2 text-slate-400">
-                Paste your notes. Get MCQs. Test yourself.
-            </p>
+            <p class="text-slate-400 mt-2">Paste your notes. Get MCQs. Test yourself.</p>
         </header>
 
-        <section id="input-section" class="mb-12">
-            <textarea
-                id="notes"
-                rows="5"
-                class="w-full bg-card/80 border border-white/10 rounded-2xl p-5 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/50 resize-none transition"
-                placeholder="Paste your study notes here...&#10;&#10;Example: The mitochondria is the powerhouse of the cell. It produces ATP through cellular respiration. Chloroplasts perform photosynthesis in plant cells."
-            ></textarea>
+        <section class="mb-12">
+            <div class="relative">
+                <textarea
+                    id="notes"
+                    rows="5"
+                    class="w-full bg-card/80 border border-white/10 rounded-2xl p-5 pr-14 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/50 resize-none transition"
+                    placeholder="Paste your study notes here...&#10;&#10;Example: The mitochondria is the powerhouse of the cell. It produces ATP through cellular respiration."
+                ></textarea>
+                <label
+                    for="image-upload"
+                    class="absolute top-4 right-4 cursor-pointer p-2 rounded-xl bg-white/5 border border-white/10 hover:border-accent/50 hover:bg-accent/10 transition group"
+                    title="Upload an image"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-400 group-hover:text-accent transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h2l2-3h10l2 3h2a1 1 0 011 1v11a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z"/>
+                        <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                </label>
+                <input type="file" id="image-upload" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+            </div>
+            <div id="image-preview" class="hidden mt-3 flex items-center gap-3">
+                <img id="preview-thumb" class="h-12 w-12 rounded-lg object-cover border border-white/10" alt="preview">
+                <span class="text-slate-400 text-sm" id="preview-name"></span>
+                <button onclick="clearImage()" class="text-wrong text-sm hover:underline">Remove</button>
+            </div>
 
-            <div class="flex items-center gap-4 mt-5">
+            <div class="flex flex-wrap items-center gap-3 mt-5">
                 <div class="flex items-center bg-card/80 border border-white/10 rounded-2xl p-1 shrink-0">
-                    <button id="lang-en" onclick="setLanguage('English')"
-                        class="lang-btn px-5 py-3 rounded-xl text-sm font-semibold transition active">
-                        English
-                    </button>
-                    <button id="lang-ar" onclick="setLanguage('Arabic')"
-                        class="lang-btn px-5 py-3 rounded-xl text-sm font-semibold transition">
-                        العربية
-                    </button>
+                    <button id="lang-en" onclick="setLanguage('English')" class="pill-btn px-4 py-2.5 rounded-xl text-sm font-semibold active">English</button>
+                    <button id="lang-ar" onclick="setLanguage('Arabic')" class="pill-btn px-4 py-2.5 rounded-xl text-sm font-semibold">العربية</button>
                 </div>
+
+                <div class="flex items-center bg-card/80 border border-white/10 rounded-2xl p-1 shrink-0">
+                    <button id="mode-mcq" onclick="setMode('mcq')" class="pill-btn px-4 py-2.5 rounded-xl text-sm font-semibold active">MCQ</button>
+                    <button id="mode-study" onclick="setMode('study')" class="pill-btn px-4 py-2.5 rounded-xl text-sm font-semibold">Study</button>
+                </div>
+
                 <button
                     onclick="generateCards()"
                     id="btn"
-                    class="btn-primary flex-1 py-4 rounded-2xl font-semibold text-slate-900 shadow-lg shadow-cyan-500/25 transition"
+                    class="btn-primary flex-1 min-w-[160px] py-3.5 rounded-2xl font-semibold text-slate-900 shadow-lg shadow-cyan-500/25 transition"
                 >
-                    Generate MCQs
+                    Generate
                 </button>
             </div>
         </section>
 
-        <div id="loading" class="hidden mb-12 text-center py-12 rounded-2xl card">
+        <div id="loading" class="hidden mb-12 text-center py-12 rounded-2xl qcard">
             <div class="shimmer rounded-xl h-3 w-48 mx-auto mb-4"></div>
             <p class="text-slate-400">AI is generating your quiz...</p>
         </div>
 
-        <div id="cards-container" class="space-y-8">
+        <div id="export-bar" class="hidden mb-6 flex justify-end relative">
+            <button onclick="toggleExportMenu()" class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-card border border-white/10 text-slate-300 hover:border-accent/40 hover:text-accent transition text-sm font-medium">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V3"/></svg>
+                Export
+            </button>
+            <div id="export-menu" class="export-menu absolute right-0 top-12 bg-card border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
+                <button onclick="exportPDF()" class="w-full px-6 py-3 text-left text-sm text-slate-300 hover:bg-accent/10 hover:text-accent transition">PDF Document</button>
+                <button onclick="exportCSV()" class="w-full px-6 py-3 text-left text-sm text-slate-300 hover:bg-accent/10 hover:text-accent transition border-t border-white/5">Anki CSV</button>
+            </div>
         </div>
+
+        <div id="cards-container" class="space-y-8"></div>
 
         <footer class="mt-16 text-center text-slate-500 text-sm pb-8">
             Developed by Abdullah Nawaf Alsalem
@@ -106,6 +174,8 @@
     <script>
         let mcqCards = [];
         let selectedLanguage = 'English';
+        let selectedMode = 'mcq';
+        let uploadedImageBase64 = null;
 
         function setLanguage(lang) {
             selectedLanguage = lang;
@@ -113,26 +183,68 @@
             document.getElementById('lang-ar').classList.toggle('active', lang === 'Arabic');
         }
 
+        function setMode(mode) {
+            selectedMode = mode;
+            document.getElementById('mode-mcq').classList.toggle('active', mode === 'mcq');
+            document.getElementById('mode-study').classList.toggle('active', mode === 'study');
+        }
+
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                uploadedImageBase64 = reader.result;
+                document.getElementById('preview-thumb').src = reader.result;
+                document.getElementById('preview-name').textContent = file.name;
+                document.getElementById('image-preview').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearImage() {
+            uploadedImageBase64 = null;
+            document.getElementById('image-upload').value = '';
+            document.getElementById('image-preview').classList.add('hidden');
+        }
+
+        function toggleExportMenu() {
+            document.getElementById('export-menu').classList.toggle('show');
+        }
+
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('export-menu');
+            if (!e.target.closest('#export-bar')) menu.classList.remove('show');
+        });
+
         async function generateCards() {
             const text = document.getElementById('notes').value.trim();
             const btn = document.getElementById('btn');
             const loading = document.getElementById('loading');
             const container = document.getElementById('cards-container');
 
-            if (!text) {
-                alert("Please paste some notes first!");
+            if (!text && !uploadedImageBase64) {
+                alert("Please paste some notes or upload an image first!");
                 return;
             }
 
             btn.disabled = true;
             loading.classList.remove('hidden');
             container.innerHTML = '';
+            document.getElementById('export-bar').classList.add('hidden');
 
             try {
+                const payload = {
+                    text: text || "(See attached image)",
+                    language: selectedLanguage,
+                    mode: selectedMode
+                };
+                if (uploadedImageBase64) payload.image = uploadedImageBase64;
+
                 const response = await fetch('https://neuralnotes.onrender.com/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text, language: selectedLanguage })
+                    body: JSON.stringify(payload)
                 });
 
                 const data = await response.json();
@@ -140,6 +252,7 @@
 
                 mcqCards = Array.isArray(data) ? data : [];
                 renderCards();
+                if (mcqCards.length) document.getElementById('export-bar').classList.remove('hidden');
             } catch (err) {
                 const msg = (err.message && err.message.includes("fetch"))
                     ? "Could not connect to the AI engine. Make sure main.py is running!"
@@ -154,12 +267,50 @@
         function renderCards() {
             const container = document.getElementById('cards-container');
             container.innerHTML = '';
-
             const isArabic = selectedLanguage === 'Arabic';
+
+            if (selectedMode === 'study') {
+                renderStudyCards(container, isArabic);
+            } else {
+                renderMCQCards(container, isArabic);
+            }
+        }
+
+        function renderStudyCards(container, isArabic) {
+            mcqCards.forEach((card, idx) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'flip-card fade-in' + (isArabic ? ' rtl' : '');
+                wrapper.id = `study-card-${idx}`;
+                wrapper.innerHTML = `
+                    <div class="flip-inner">
+                        <div class="flip-face flip-front-face">
+                            <span class="bg-accent/20 text-accent text-xs font-medium px-3 py-1 rounded-full mb-4">Q${idx + 1}</span>
+                            <p class="text-lg font-medium text-slate-200 leading-relaxed text-center mb-6">${escapeHtml(card.question)}</p>
+                            <button onclick="flipCard(${idx})" class="flip-btn px-6 py-2 rounded-full text-sm font-semibold">
+                                Flip to Answer
+                            </button>
+                        </div>
+                        <div class="flip-face flip-back-face">
+                            <span class="text-xs font-bold opacity-60 uppercase tracking-wider mb-3">Answer</span>
+                            <p class="text-base font-semibold leading-relaxed text-center mb-6">${escapeHtml(card.answer || card.correctAnswer || '')}</p>
+                            <button onclick="flipCard(${idx})" class="flip-btn flip-btn-back px-6 py-2 rounded-full text-sm font-semibold">
+                                Back to Question
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(wrapper);
+            });
+        }
+
+        function flipCard(idx) {
+            document.getElementById(`study-card-${idx}`).classList.toggle('flipped');
+        }
+
+        function renderMCQCards(container, isArabic) {
             mcqCards.forEach((card, idx) => {
                 const el = document.createElement('div');
-                el.className = 'card rounded-2xl p-8 fade-in' + (isArabic ? ' rtl' : '');
-                el.dataset.index = idx;
+                el.className = 'qcard rounded-2xl p-8 fade-in' + (isArabic ? ' rtl' : '');
                 el.innerHTML = `
                     <div class="flex items-center gap-2 mb-6">
                         <span class="bg-accent/20 text-accent text-sm font-medium px-3 py-1 rounded-full">Q${idx + 1}</span>
@@ -168,9 +319,8 @@
                     <div class="space-y-3" id="options-${idx}"></div>
                     <div id="feedback-${idx}" class="mt-4 hidden"></div>
                 `;
-
                 const optionsContainer = el.querySelector(`#options-${idx}`);
-                (card.options || []).forEach((opt, optIdx) => {
+                (card.options || []).forEach((opt) => {
                     const btn = document.createElement('button');
                     btn.className = 'card-option w-full text-left p-4 rounded-xl border border-white/10 bg-white/5 text-slate-300';
                     btn.textContent = opt;
@@ -178,7 +328,6 @@
                     btn.onclick = () => selectOption(idx, opt);
                     optionsContainer.appendChild(btn);
                 });
-
                 container.appendChild(el);
             });
         }
@@ -188,11 +337,9 @@
             const correctAnswer = (card.correctAnswer || card.correct_answer || '').trim();
             const optionsContainer = document.getElementById(`options-${cardIdx}`);
             const feedbackDiv = document.getElementById(`feedback-${cardIdx}`);
-
             if (!optionsContainer || !card || !feedbackDiv) return;
 
             const buttons = optionsContainer.querySelectorAll('button');
-
             const isCorrect = String(selectedOption).trim() === correctAnswer;
             const matchCorrect = (opt) => String(opt || '').trim() === correctAnswer;
 
@@ -211,8 +358,7 @@
                 }
                 feedbackDiv.classList.remove('hidden');
                 const wrongCount = optionsContainer.querySelectorAll('.wrong').length;
-                const totalOptions = (card.options || []).length;
-                if (wrongCount >= totalOptions - 1) {
+                if (wrongCount >= (card.options || []).length - 1) {
                     buttons.forEach(btn => {
                         btn.classList.add('disabled');
                         if (matchCorrect(btn.dataset.option)) btn.classList.add('correct');
@@ -222,6 +368,71 @@
                     feedbackDiv.innerHTML = '<span class="text-wrong font-medium">Incorrect. Try another answer!</span>';
                 }
             }
+        }
+
+        function exportPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const isArabic = selectedLanguage === 'Arabic';
+            let y = 20;
+
+            doc.setFontSize(18);
+            doc.text('Alsalem Neural-Notes', 105, y, { align: 'center' });
+            y += 14;
+
+            mcqCards.forEach((card, idx) => {
+                if (y > 260) { doc.addPage(); y = 20; }
+                doc.setFontSize(12);
+                doc.setFont(undefined, 'bold');
+                doc.text(`Q${idx + 1}: ${card.question}`, 14, y, { maxWidth: 180 });
+                const qLines = doc.splitTextToSize(`Q${idx + 1}: ${card.question}`, 180);
+                y += qLines.length * 6 + 4;
+
+                doc.setFont(undefined, 'normal');
+                if (card.options) {
+                    card.options.forEach((opt, i) => {
+                        if (y > 275) { doc.addPage(); y = 20; }
+                        const prefix = String.fromCharCode(65 + i);
+                        const marker = opt === (card.correctAnswer || card.correct_answer) ? ' ✓' : '';
+                        doc.text(`  ${prefix}. ${opt}${marker}`, 18, y, { maxWidth: 170 });
+                        const oLines = doc.splitTextToSize(`  ${prefix}. ${opt}${marker}`, 170);
+                        y += oLines.length * 6 + 2;
+                    });
+                } else if (card.answer) {
+                    doc.text(`A: ${card.answer}`, 18, y, { maxWidth: 170 });
+                    const aLines = doc.splitTextToSize(`A: ${card.answer}`, 170);
+                    y += aLines.length * 6 + 2;
+                }
+                y += 8;
+            });
+
+            doc.save('NeuralNotes_Export.pdf');
+            document.getElementById('export-menu').classList.remove('show');
+        }
+
+        function exportCSV() {
+            let csv = '';
+            mcqCards.forEach(card => {
+                const q = `"${(card.question || '').replace(/"/g, '""')}"`;
+                let a;
+                if (card.answer) {
+                    a = `"${card.answer.replace(/"/g, '""')}"`;
+                } else {
+                    const correct = card.correctAnswer || card.correct_answer || '';
+                    const opts = (card.options || []).map(o => `${o === correct ? '✓ ' : ''}${o}`).join(' | ');
+                    a = `"${opts.replace(/"/g, '""')}"`;
+                }
+                csv += `${q},${a}\n`;
+            });
+
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'NeuralNotes_Anki.csv';
+            link.click();
+            URL.revokeObjectURL(url);
+            document.getElementById('export-menu').classList.remove('show');
         }
 
         function escapeHtml(s) {
