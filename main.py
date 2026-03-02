@@ -36,6 +36,10 @@ class NoteRequest(BaseModel):
     image: Optional[str] = None
     mode: str = "mcq"
 
+class MindMapRequest(BaseModel):
+    text: str
+    language: str = "English"
+
 
 def build_prompt(text: str, lang: str, mode: str, has_image: bool = False) -> str:
     lang_instruction = (
@@ -108,6 +112,54 @@ async def generate_cards(request: NoteRequest):
         return json.loads(json_text)
     except Exception as e:
         print(f"DEBUG ERROR: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/generate-mindmap")
+async def generate_mindmap(request: MindMapRequest):
+    lang = request.language if request.language in ("English", "Arabic") else "English"
+    lang_instruction = (
+        "Generate all labels in clear, modern Arabic."
+        if lang == "Arabic"
+        else "Generate all labels in English."
+    )
+
+    prompt = f"""
+Analyze the following text and create a hierarchical mind map.
+{lang_instruction}
+Return ONLY valid JSON in this exact format (no markdown, no extra text):
+{{
+  "label": "Main Topic",
+  "children": [
+    {{
+      "label": "Sub-topic 1",
+      "children": [
+        {{"label": "Key Point A", "children": []}},
+        {{"label": "Key Point B", "children": []}}
+      ]
+    }},
+    {{
+      "label": "Sub-topic 2",
+      "children": [
+        {{"label": "Key Point C", "children": []}}
+      ]
+    }}
+  ]
+}}
+Each node must have "label" (string) and "children" (array).
+Create 3-6 sub-topics, each with 2-4 key points.
+
+TEXT: {request.text}
+"""
+
+    try:
+        response = model.generate_content(prompt)
+        if not response.text:
+            raise Exception("AI returned an empty response")
+        json_text = response.text.replace("```json", "").replace("```", "").strip()
+        return json.loads(json_text)
+    except Exception as e:
+        print(f"DEBUG ERROR (mindmap): {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
